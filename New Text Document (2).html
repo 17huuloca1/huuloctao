@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trò Chơi Xếp Hình</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: white;
+        }
+        .game-container {
+            position: relative;
+            width: 300px;
+            height: 600px;
+            border: 2px solid white;
+            margin: auto;
+            background-color: black;
+        }
+        .block {
+            width: 30px;
+            height: 30px;
+            position: absolute;
+            border: 1px solid white;
+        }
+        .controls {
+            margin-top: 10px;
+        }
+        .control-btn {
+            font-size: 20px;
+            padding: 10px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Trò Chơi Xếp Hình</h1>
+    <p>Dùng phím mũi tên để di chuyển, phím lên để xoay, phím xuống để rơi nhanh</p>
+    <p>Điểm: <span id="score">0</span></p>
+    <div class="game-container" id="game"></div>
+    <div class="controls">
+        <button class="control-btn" onclick="moveShape(-30)">⬅️</button>
+        <button class="control-btn" onclick="rotateShape()">🔄</button>
+        <button class="control-btn" onclick="moveShape(30)">➡️</button>
+        <button class="control-btn" onclick="dropShape(50)">⬇️</button>
+    </div>
+    <script>
+        const gameContainer = document.getElementById("game");
+        const scoreDisplay = document.getElementById("score");
+        let occupiedPositions = new Map();
+        let score = 0;
+        let activeShape = null;
+        let dropInterval;
+        const colors = ["cyan", "blue", "orange", "yellow", "green", "purple", "red"];
+        const shapes = [
+            [[1, 1, 1, 1]],
+            [[1, 1, 0], [0, 1, 1]],
+            [[0, 1, 1], [1, 1, 0]],
+            [[1, 1], [1, 1]],
+            [[1, 1, 1], [0, 1, 0]],
+            [[1, 1, 1], [1, 0, 0]],
+            [[1, 1, 1], [0, 0, 1]]
+        ];
+
+        function createShape() {
+    const shapeType = Math.floor(Math.random() * shapes.length);
+    let shapeMatrix = shapes[shapeType];
+    const color = colors[shapeType];
+    const blocks = [];
+    let position = { x: 120, y: 0 };
+
+    // Kiểm tra nếu khối mới xuất hiện tại vị trí bị chiếm
+    let isGameOver = shapeMatrix.some((row, rIdx) => 
+        row.some((cell, cIdx) => 
+            cell && occupiedPositions.has(`${position.x + cIdx * 30},${position.y + rIdx * 30}`)
+        )
+    );
+
+    if (isGameOver) {
+        alert("Game Over! Điểm của bạn: " + score);
+        location.reload(); // Reset game
+        return;
+    }
+
+    shapeMatrix.forEach((row, rIdx) => {
+        row.forEach((cell, cIdx) => {
+            if (cell) {
+                const block = document.createElement("div");
+                block.classList.add("block");
+                block.style.backgroundColor = color;
+                block.style.top = `${position.y + rIdx * 30}px`;
+                block.style.left = `${position.x + cIdx * 30}px`;
+                gameContainer.appendChild(block);
+                blocks.push(block);
+            }
+        });
+    });
+
+    return { blocks, position, shapeMatrix, color };
+}
+
+
+        function moveShape(dx) {
+            let canMove = activeShape.blocks.every(block => {
+                let newX = parseInt(block.style.left) + dx;
+                return newX >= 0 && newX < 300;
+            });
+            if (canMove) {
+                activeShape.position.x += dx;
+                activeShape.blocks.forEach(block => {
+                    block.style.left = (parseInt(block.style.left) + dx) + "px";
+                });
+            }
+        }
+
+        function dropShape(speed) {
+            clearInterval(dropInterval);
+            dropInterval = setInterval(() => {
+                let canMove = activeShape.blocks.every(block => {
+                    let newY = parseInt(block.style.top) + 30;
+                    return newY < 600 && !occupiedPositions.has(`${parseInt(block.style.left)},${newY}`);
+                });
+                if (canMove) {
+                    activeShape.position.y += 30;
+                    activeShape.blocks.forEach(block => {
+                        block.style.top = (parseInt(block.style.top) + 30) + "px";
+                    });
+                } else {
+                    activeShape.blocks.forEach(block => {
+                        occupiedPositions.set(`${parseInt(block.style.left)},${parseInt(block.style.top)}`, block);
+                    });
+                    clearFullRows();
+                    activeShape = createShape();
+                }
+            }, speed);
+        }
+
+	function rotateShape() {
+    let newMatrix = activeShape.shapeMatrix[0].map((_, colIndex) =>
+        activeShape.shapeMatrix.map(row => row[colIndex]).reverse()
+    );
+
+    let canRotate = true;
+    newMatrix.forEach((row, rIdx) => {
+        row.forEach((cell, cIdx) => {
+            if (cell) {
+                let newX = activeShape.position.x + cIdx * 30;
+                let newY = activeShape.position.y + rIdx * 30;
+                if (newX < 0 || newX >= 300 || newY >= 600 || occupiedPositions.has(`${newX},${newY}`)) {
+                    canRotate = false;
+                }
+            }
+        });
+    });
+
+    if (canRotate) {
+        activeShape.shapeMatrix = newMatrix;
+        let index = 0;
+        newMatrix.forEach((row, rIdx) => {
+            row.forEach((cell, cIdx) => {
+                if (cell) {
+                    activeShape.blocks[index].style.top = `${activeShape.position.y + rIdx * 30}px`;
+                    activeShape.blocks[index].style.left = `${activeShape.position.x + cIdx * 30}px`;
+                    index++;
+                }
+            });
+        });
+    }
+}
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") moveShape(-30);
+    if (event.key === "ArrowRight") moveShape(30);
+    if (event.key === "ArrowDown") dropShape(50);
+    if (event.key === "ArrowUp") rotateShape();  // Thêm xoay bằng phím lên
+});
+
+
+        function clearFullRows() {
+            for (let y = 570; y >= 0; y -= 30) {
+                let fullRow = [...Array(10).keys()].map(x => `${x * 30},${y}`);
+                if (fullRow.every(pos => occupiedPositions.has(pos))) {
+                    fullRow.forEach(pos => {
+                        gameContainer.removeChild(occupiedPositions.get(pos));
+                        occupiedPositions.delete(pos);
+                    });
+                    occupiedPositions = new Map([...occupiedPositions.entries()].map(([key, block]) => {
+                        let [x, posY] = key.split(",").map(Number);
+                        if (posY < y) {
+                            block.style.top = `${posY + 30}px`;
+                            return [`${x},${posY + 30}`, block];
+                        }
+                        return [key, block];
+                    }));
+                    score += 10;
+                    scoreDisplay.textContent = score;
+                    y += 30;
+                }
+            }
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowLeft") moveShape(-30);
+            if (event.key === "ArrowRight") moveShape(30);
+            if (event.key === "ArrowDown") dropShape(50);
+        });
+
+        document.addEventListener("keyup", (event) => {
+            if (event.key === "ArrowDown") dropShape(500);
+        });
+
+        activeShape = createShape();
+        dropShape(500);
+    </script>
+</body>
+</html> 
