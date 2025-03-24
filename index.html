@@ -8,7 +8,9 @@
         body {
             text-align: center;
             font-family: Arial, sans-serif;
-            background-color: #222;
+            background-image: url('Background.JPG');
+            background-size: cover;
+            background-position: center;
             color: white;
         }
         .game-container {
@@ -17,7 +19,6 @@
             height: 600px;
             border: 2px solid white;
             margin: auto;
-            background-color: black;
         }
         .block {
             width: 30px;
@@ -26,26 +27,90 @@
             border: 1px solid white;
         }
         .controls {
-            margin-top: 10px;
+            margin-top: 20px;
         }
         .control-btn {
+            font-size: 22px;
+            padding: 15px 25px;
+            margin: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #39FF14; /* Màu xanh neon */
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.6); /* Hiệu ứng sáng neon */
+        }
+        .control-btn:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.8); /* Neon sáng hơn khi hover */
+            transform: scale(1.1);
+        }
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        .start-btn, .pause-btn {
             font-size: 20px;
-            padding: 10px;
-            margin: 5px;
+            padding: 18px 35px;
+            margin: 10px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            color: #39FF14; /* Màu xanh neon */
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.6); /* Neon sáng */
+        }
+        .start-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+        }
+        .start-btn:hover {
+            background: linear-gradient(45deg, #388E3C, #45a049);
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.8);
+            transform: scale(1.1);
+        }
+        .start-btn:active {
+            background: linear-gradient(45deg, #388E3C, #45a049);
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+            transform: scale(0.95);
+        }
+        .pause-btn {
+            background: linear-gradient(45deg, #f44336, #e53935);
+        }
+        .pause-btn:hover {
+            background: linear-gradient(45deg, #d32f2f, #e53935);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+        .pause-btn:active {
+            background: linear-gradient(45deg, #d32f2f, #e53935);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+            transform: scale(0.95);
+        }
+        .pause-btn:disabled, .start-btn:disabled {
+            background-color: #9e9e9e;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        h1, p {
+            color: #39FF14; /* Màu chữ neon cho tiêu đề và điểm */
+            text-shadow: 0 0 10px rgba(57, 255, 20, 1); /* Hiệu ứng sáng neon */
         }
     </style>
-</head>
-<body>
+</head><body>
     <h1>Trò Chơi Xếp Hình</h1>
-    <p>Dùng phím mũi tên để di chuyển, phím lên để xoay, phím xuống để rơi nhanh</p>
     <p>Điểm: <span id="score">0</span></p>
     <div class="game-container" id="game"></div>
     <div class="controls">
         <button class="control-btn" onclick="moveShape(-30)">⬅️</button>
         <button class="control-btn" onclick="rotateShape()">🔄</button>
         <button class="control-btn" onclick="moveShape(30)">➡️</button>
-        <button class="control-btn" onclick="dropShape(50)">⬇️</button>
+        <button class="control-btn" onclick="dropShape(50)">🚫</button>
     </div>
+    <div>
+        <button class="start-btn" onclick="startGame()">Bắt đầu</button>
+        <button class="pause-btn" onclick="pauseGame()">Tạm dừng</button>
+    </div>
+
     <script>
         const gameContainer = document.getElementById("game");
         const scoreDisplay = document.getElementById("score");
@@ -53,6 +118,7 @@
         let score = 0;
         let activeShape = null;
         let dropInterval;
+        let isPaused = false;
         const colors = ["cyan", "blue", "orange", "yellow", "green", "purple", "red"];
         const shapes = [
             [[1, 1, 1, 1]],
@@ -65,44 +131,43 @@
         ];
 
         function createShape() {
-    const shapeType = Math.floor(Math.random() * shapes.length);
-    let shapeMatrix = shapes[shapeType];
-    const color = colors[shapeType];
-    const blocks = [];
-    let position = { x: 120, y: 0 };
+            const shapeType = Math.floor(Math.random() * shapes.length);
+            let shapeMatrix = shapes[shapeType];
+            const color = colors[shapeType];
+            const blocks = [];
+            let position = { x: 120, y: 0 };
 
-    // Kiểm tra nếu khối mới xuất hiện tại vị trí bị chiếm
-    let isGameOver = shapeMatrix.some((row, rIdx) => 
-        row.some((cell, cIdx) => 
-            cell && occupiedPositions.has(`${position.x + cIdx * 30},${position.y + rIdx * 30}`)
-        )
-    );
+            let isGameOver = shapeMatrix.some((row, rIdx) => 
+                row.some((cell, cIdx) => 
+                    cell && occupiedPositions.has(`${position.x + cIdx * 30},${position.y + rIdx * 30}`)
+                )
+            );
 
-    if (isGameOver) {
-        alert("Game Over! Điểm của bạn: " + score);
-        location.reload(); // Reset game
-        return;
-    }
-
-    shapeMatrix.forEach((row, rIdx) => {
-        row.forEach((cell, cIdx) => {
-            if (cell) {
-                const block = document.createElement("div");
-                block.classList.add("block");
-                block.style.backgroundColor = color;
-                block.style.top = `${position.y + rIdx * 30}px`;
-                block.style.left = `${position.x + cIdx * 30}px`;
-                gameContainer.appendChild(block);
-                blocks.push(block);
+            if (isGameOver) {
+                alert("Game Over! Điểm của bạn: " + score);
+                location.reload(); 
+                return;
             }
-        });
-    });
 
-    return { blocks, position, shapeMatrix, color };
-}
+            shapeMatrix.forEach((row, rIdx) => {
+                row.forEach((cell, cIdx) => {
+                    if (cell) {
+                        const block = document.createElement("div");
+                        block.classList.add("block");
+                        block.style.backgroundColor = color;
+                        block.style.top = `${position.y + rIdx * 30}px`;
+                        block.style.left = `${position.x + cIdx * 30}px`;
+                        gameContainer.appendChild(block);
+                        blocks.push(block);
+                    }
+                });
+            });
 
+            return { blocks, position, shapeMatrix, color };
+        }
 
         function moveShape(dx) {
+            if (isPaused) return;
             let canMove = activeShape.blocks.every(block => {
                 let newX = parseInt(block.style.left) + dx;
                 return newX >= 0 && newX < 300;
@@ -116,6 +181,7 @@
         }
 
         function dropShape(speed) {
+            if (isPaused) return;
             clearInterval(dropInterval);
             dropInterval = setInterval(() => {
                 let canMove = activeShape.blocks.every(block => {
@@ -137,46 +203,39 @@
             }, speed);
         }
 
-	function rotateShape() {
-    let newMatrix = activeShape.shapeMatrix[0].map((_, colIndex) =>
-        activeShape.shapeMatrix.map(row => row[colIndex]).reverse()
-    );
+        function rotateShape() {
+            if (isPaused) return;
+            let newMatrix = activeShape.shapeMatrix[0].map((_, colIndex) =>
+                activeShape.shapeMatrix.map(row => row[colIndex]).reverse()
+            );
 
-    let canRotate = true;
-    newMatrix.forEach((row, rIdx) => {
-        row.forEach((cell, cIdx) => {
-            if (cell) {
-                let newX = activeShape.position.x + cIdx * 30;
-                let newY = activeShape.position.y + rIdx * 30;
-                if (newX < 0 || newX >= 300 || newY >= 600 || occupiedPositions.has(`${newX},${newY}`)) {
-                    canRotate = false;
-                }
-            }
-        });
-    });
-
-    if (canRotate) {
-        activeShape.shapeMatrix = newMatrix;
-        let index = 0;
-        newMatrix.forEach((row, rIdx) => {
-            row.forEach((cell, cIdx) => {
-                if (cell) {
-                    activeShape.blocks[index].style.top = `${activeShape.position.y + rIdx * 30}px`;
-                    activeShape.blocks[index].style.left = `${activeShape.position.x + cIdx * 30}px`;
-                    index++;
-                }
+            let canRotate = true;
+            newMatrix.forEach((row, rIdx) => {
+                row.forEach((cell, cIdx) => {
+                    if (cell) {
+                        let newX = activeShape.position.x + cIdx * 30;
+                        let newY = activeShape.position.y + rIdx * 30;
+                        if (newX < 0 || newX >= 300 || newY >= 600 || occupiedPositions.has(`${newX},${newY}`)) {
+                            canRotate = false;
+                        }
+                    }
+                });
             });
-        });
-    }
-}
 
-document.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowLeft") moveShape(-30);
-    if (event.key === "ArrowRight") moveShape(30);
-    if (event.key === "ArrowDown") dropShape(50);
-    if (event.key === "ArrowUp") rotateShape();  // Thêm xoay bằng phím lên
-});
-
+            if (canRotate) {
+                activeShape.shapeMatrix = newMatrix;
+                let index = 0;
+                newMatrix.forEach((row, rIdx) => {
+                    row.forEach((cell, cIdx) => {
+                        if (cell) {
+                            activeShape.blocks[index].style.top = `${activeShape.position.y + rIdx * 30}px`;
+                            activeShape.blocks[index].style.left = `${activeShape.position.x + cIdx * 30}px`;
+                            index++;
+                        }
+                    });
+                });
+            }
+        }
 
         function clearFullRows() {
             for (let y = 570; y >= 0; y -= 30) {
@@ -201,18 +260,35 @@ document.addEventListener("keydown", (event) => {
             }
         }
 
+        function startGame() {
+            if (!activeShape) {
+                activeShape = createShape();
+            }
+            dropShape(500);
+        }
+
+        function pauseGame() {
+            isPaused = !isPaused;
+            const pauseButton = document.querySelector('.pause-btn');
+            if (isPaused) {
+                clearInterval(dropInterval);
+                pauseButton.textContent = "Tiếp tục";
+            } else {
+                dropShape(500);
+                pauseButton.textContent = "Tạm dừng";
+            }
+        }
+
         document.addEventListener("keydown", (event) => {
             if (event.key === "ArrowLeft") moveShape(-30);
             if (event.key === "ArrowRight") moveShape(30);
             if (event.key === "ArrowDown") dropShape(50);
+            if (event.key === "ArrowUp") rotateShape();  
         });
 
         document.addEventListener("keyup", (event) => {
             if (event.key === "ArrowDown") dropShape(500);
         });
-
-        activeShape = createShape();
-        dropShape(500);
     </script>
 </body>
-</html> 
+</html>
