@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
     <title>Trò Chơi Xếp Hình</title>
     <style>
         body {
@@ -12,6 +14,8 @@
             background-size: cover;
             background-position: center;
             color: white;
+touch-action: manipulation; /* Chặn hành động zoom và cuộn */
+    -ms-touch-action: manipulation; /* Dành cho các trình duyệt IE */
         }
         .game-container {
             position: relative;
